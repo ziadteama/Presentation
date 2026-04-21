@@ -184,6 +184,20 @@ h3 {
   border: 1px solid rgba(148, 163, 184, 0.4);
 }
 
+.toc-card-title,
+.toc-card-subtitle {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.toc-card-subtitle {
+  display: -webkit-box;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+
 .theme-light .dot-label {
   background: rgba(241, 245, 249, 0.98);
   border-color: rgba(71, 85, 105, 0.35);

@@ -7,6 +7,7 @@ import ProgressDots from './components/ProgressDots'
 import Slide from './components/Slide'
 
 const IntroSlide = lazy(() => import('./components/IntroSlide'))
+const TableOfContentsSlide = lazy(() => import('./components/TableOfContentsSlide'))
 const ArchitectureFlow = lazy(() => import('./components/ArchitectureFlow'))
 const HardwareCards = lazy(() => import('./components/HardwareCards'))
 const AlertSimulator = lazy(() => import('./components/AlertSimulator'))
@@ -57,21 +58,14 @@ function App() {
         ),
       },
       {
-        id: 'motivation',
-        navLabel: 'Motivation',
-        eyebrow: '02 / Motivation',
-        title: 'Global Crisis, Local Urgency',
+        id: 'table-of-contents',
+        navLabel: 'Overview',
+        eyebrow: '02 / Presentation Overview',
+        title: 'Presentation Overview',
         content: (
-          <div className="space-y-5 text-lg text-current/82">
-            <p>
-              Road traffic incidents claim 1.19 million lives each year globally. In Egypt, 5,260 deaths were
-              recorded in 2024, and human factors contribute around 64% of accidents.
-            </p>
-            <p>
-              Physiologically, heart rate can drop by about 9% when a driver becomes sleepy, making multimodal
-              fusion essential for early detection.
-            </p>
-          </div>
+          <Suspense fallback={<div className="rounded-xl border border-current/20 p-6">Loading overview module...</div>}>
+            <TableOfContentsSlide />
+          </Suspense>
         ),
       },
       {
