@@ -1,0 +1,17 @@
+export const navSections = [
+  { id: 'introduction', label: 'Introduction' },
+  { id: 'motivation', label: 'Motivation' },
+  { id: 'literature-survey', label: 'Literature' },
+  { id: 'challenges', label: 'Challenges' },
+  { id: 'problem-statement', label: 'Problem' },
+  { id: 'project-objectives', label: 'Objectives' },
+  { id: 'key-activities', label: 'Activities' },
+  { id: 'system-architecture', label: 'Architecture' },
+  { id: 'technical-phase', label: 'Technical Phase' },
+  { id: 'design-constraints', label: 'Constraints' },
+  { id: 'software-hardware', label: 'Hardware' },
+  { id: 'business-model', label: 'Business' },
+  { id: 'ethics', label: 'Ethics' },
+  { id: 'what-has-been-done', label: 'Project I' },
+  { id: 'plan-for-project-ii', label: 'Project II' },
+]
