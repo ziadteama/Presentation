@@ -1,11 +1,12 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence } from 'framer-motion'
-import { Activity, Camera, Eye, Route, ShieldAlert, Smartphone } from 'lucide-react'
+import { Activity, Camera, Eye, Route, Smartphone } from 'lucide-react'
 import PresentationControls from './components/PresentationControls'
 import ProgressBar from './components/ProgressBar'
 import ProgressDots from './components/ProgressDots'
 import Slide from './components/Slide'
 
+const IntroSlide = lazy(() => import('./components/IntroSlide'))
 const ArchitectureFlow = lazy(() => import('./components/ArchitectureFlow'))
 const HardwareCards = lazy(() => import('./components/HardwareCards'))
 const AlertSimulator = lazy(() => import('./components/AlertSimulator'))
@@ -33,57 +34,6 @@ const serviceCards = [
   },
 ]
 
-const scenarioData = {
-  fatigue: {
-    label: 'Fatigue Wave',
-    risk: 82,
-    confidence: 91,
-    trigger: 'PERCLOS + HRV drop + longer blink windows',
-  },
-  distraction: {
-    label: 'Attention Drift',
-    risk: 67,
-    confidence: 88,
-    trigger: 'Gaze deviation and head rotation away from road',
-  },
-  phone: {
-    label: 'Phone Engagement',
-    risk: 74,
-    confidence: 94,
-    trigger: 'YOLOv5 phone-hand overlap + off-road eye vector',
-  },
-}
-
-const statInfo = {
-  global: 'WHO-level global impact benchmark.',
-  egypt: 'CAPMAS 2024 national statistic.',
-  human: 'Human behavior remains the dominant accident factor.',
-}
-
-function StatTicker({ value, suffix = '', decimals = 0, duration = 1200 }) {
-  const [current, setCurrent] = useState(0)
-
-  useEffect(() => {
-    let frameId
-    const start = performance.now()
-
-    const step = (now) => {
-      const ratio = Math.min((now - start) / duration, 1)
-      const eased = 1 - (1 - ratio) * (1 - ratio)
-      setCurrent(value * eased)
-
-      if (ratio < 1) {
-        frameId = requestAnimationFrame(step)
-      }
-    }
-
-    frameId = requestAnimationFrame(step)
-    return () => cancelAnimationFrame(frameId)
-  }, [value, duration])
-
-  return `${current.toFixed(decimals)}${suffix}`
-}
-
 function App() {
   const [currentSlide, setCurrentSlide] = useState(0)
   const [direction, setDirection] = useState(1)
@@ -91,11 +41,7 @@ function App() {
   const [autoplay, setAutoplay] = useState(false)
   const [theme, setTheme] = useState('dark')
   const [alertActive, setAlertActive] = useState(false)
-  const [scenario, setScenario] = useState('fatigue')
-  const [activeStat, setActiveStat] = useState('global')
   const wheelLockRef = useRef(false)
-
-  const activeScenario = scenarioData[scenario]
 
   const slides = useMemo(
     () => [
@@ -103,81 +49,11 @@ function App() {
         id: 'introduction',
         navLabel: 'Introduction',
         eyebrow: '01 / Introduction',
-        title: 'A Multimodal Safety Shield.',
+        title: 'Driver Inattention is Killing Millions',
         content: (
-          <div className="grid grid-cols-[1.35fr_1fr] gap-8">
-            <div>
-              <p className="max-w-4xl text-xl leading-relaxed text-current/80">
-                A real-time Driver Monitoring System that detects fatigue, distraction, and reduced attention
-                using vision-based behavioral sensing and physiological heart-rate monitoring.
-              </p>
-              <div className="mt-8 grid grid-cols-3 gap-4">
-                <button type="button" className="hud-chip rounded-2xl border p-4 text-left" onClick={() => setActiveStat('global')}>
-                  <p className="text-xs uppercase tracking-[0.2em]">Global deaths</p>
-                  <p className="mt-2 text-3xl font-black text-amber-300">
-                    <StatTicker value={1.19} decimals={2} suffix="M" />
-                  </p>
-                </button>
-                <button type="button" className="hud-chip rounded-2xl border p-4 text-left" onClick={() => setActiveStat('egypt')}>
-                  <p className="text-xs uppercase tracking-[0.2em]">Egypt 2024</p>
-                  <p className="mt-2 text-3xl font-black text-red-300">
-                    <StatTicker value={5260} />
-                  </p>
-                </button>
-                <button type="button" className="hud-chip rounded-2xl border p-4 text-left" onClick={() => setActiveStat('human')}>
-                  <p className="text-xs uppercase tracking-[0.2em]">Human factors</p>
-                  <p className="mt-2 text-3xl font-black text-cyan-300">
-                    <StatTicker value={64} suffix="%" />
-                  </p>
-                </button>
-              </div>
-              <p className="mt-4 rounded-xl border border-current/20 bg-black/15 p-3 text-sm text-current/85">
-                {statInfo[activeStat]}
-              </p>
-            </div>
-
-            <aside className="hud-chip rounded-2xl border p-5">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold uppercase tracking-[0.2em]">Live Risk Scenario</h3>
-                <ShieldAlert size={18} className="text-amber-300" />
-              </div>
-
-              <div className="mt-4 flex gap-2">
-                {Object.entries(scenarioData).map(([key, info]) => (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => setScenario(key)}
-                    className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
-                      scenario === key ? 'bg-cyan-400/20 text-cyan-200' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                    }`}
-                  >
-                    {info.label}
-                  </button>
-                ))}
-              </div>
-
-              <div className="mt-5 space-y-4">
-                <div>
-                  <p className="text-xs tracking-[0.16em] text-current/70">Estimated Crash Risk</p>
-                  <div className="mt-2 h-2 overflow-hidden rounded bg-black/35">
-                    <div className="h-full bg-linear-to-r from-cyan-400 via-amber-400 to-red-500" style={{ width: `${activeScenario.risk}%` }} />
-                  </div>
-                  <p className="mt-1 text-right text-sm font-bold text-red-300">{activeScenario.risk}%</p>
-                </div>
-                <div>
-                  <p className="text-xs tracking-[0.16em] text-current/70">Detection Confidence</p>
-                  <div className="mt-2 h-2 overflow-hidden rounded bg-black/35">
-                    <div className="h-full bg-cyan-400" style={{ width: `${activeScenario.confidence}%` }} />
-                  </div>
-                  <p className="mt-1 text-right text-sm font-bold text-cyan-300">{activeScenario.confidence}%</p>
-                </div>
-                <p className="rounded-xl border border-current/20 bg-black/15 p-3 text-sm text-current/85">
-                  <span className="font-bold text-current">Trigger Logic:</span> {activeScenario.trigger}
-                </p>
-              </div>
-            </aside>
-          </div>
+          <Suspense fallback={<div className="rounded-xl border border-current/20 p-6">Loading intro module...</div>}>
+            <IntroSlide />
+          </Suspense>
         ),
       },
       {
@@ -412,7 +288,7 @@ function App() {
         ),
       },
     ],
-    [activeScenario.confidence, activeScenario.risk, activeScenario.trigger, activeStat, alertActive, scenario],
+    [alertActive],
   )
 
   const navigateTo = (nextIndex) => {
@@ -446,7 +322,7 @@ function App() {
 
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  })
+  }, [started, currentSlide])
 
   useEffect(() => {
     if (!autoplay || !started) {
