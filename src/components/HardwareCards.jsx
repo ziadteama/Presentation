@@ -33,13 +33,13 @@ function HardwareCards() {
         return (
           <article
             key={item.name}
-            className="group relative overflow-hidden rounded-2xl border border-slate-700 bg-slate-950/85 p-5 transition hover:-translate-y-1 hover:border-cyan-400/55"
+            className="info-card group relative overflow-hidden rounded-2xl border p-5"
           >
             <div className="mb-3 inline-flex rounded-lg border border-cyan-400/35 bg-cyan-500/10 p-2 text-cyan-300">
               <Icon size={20} />
             </div>
-            <h3 className="text-base font-bold text-slate-100">{item.name}</h3>
-            <p className="mt-2 text-sm text-slate-300">{item.detail}</p>
+            <h3 className="text-base font-bold">{item.name}</h3>
+            <p className="mt-2 text-sm text-current/80">{item.detail}</p>
             {item.hover ? (
               <div className="pointer-events-none absolute inset-x-0 bottom-0 translate-y-full border-t border-cyan-300/40 bg-slate-800/95 p-3 text-xs text-cyan-100 transition duration-300 group-hover:translate-y-0">
                 {item.hover}

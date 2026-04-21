@@ -16,7 +16,7 @@ function AlertSimulator({ alertActive, onTrigger }) {
           Trigger Alert
         </button>
       </div>
-      <p className={`mt-4 rounded-lg border p-3 text-sm font-semibold ${alertActive ? 'border-red-300/70 bg-red-400/15 text-red-100' : 'border-slate-700 bg-slate-900/50 text-slate-300'}`}>
+      <p className={`mt-4 rounded-lg border p-3 text-sm font-semibold ${alertActive ? 'border-red-300/70 bg-red-400/15 text-red-100' : 'border-slate-500/40 bg-black/20 text-slate-200'}`}>
         {alertActive
           ? 'Eye Closure Detected! Alerting Nearby Hospital...'
           : 'System idle: awaiting multimodal event trigger.'}

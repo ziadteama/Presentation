@@ -1,12 +1,14 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { AnimatePresence } from 'framer-motion'
 import { Activity, Camera, Eye, Route, ShieldAlert, Smartphone } from 'lucide-react'
-import AlertSimulator from './components/AlertSimulator'
-import ArchitectureFlow from './components/ArchitectureFlow'
-import HardwareCards from './components/HardwareCards'
-import Navbar from './components/Navbar'
+import PresentationControls from './components/PresentationControls'
 import ProgressBar from './components/ProgressBar'
-import SectionBlock from './components/SectionBlock'
-import { navSections } from './data/sections'
+import ProgressDots from './components/ProgressDots'
+import Slide from './components/Slide'
+
+const ArchitectureFlow = lazy(() => import('./components/ArchitectureFlow'))
+const HardwareCards = lazy(() => import('./components/HardwareCards'))
+const AlertSimulator = lazy(() => import('./components/AlertSimulator'))
 
 const serviceCards = [
   {
@@ -52,71 +54,412 @@ const scenarioData = {
   },
 }
 
-function StatTicker({ value, suffix = '', duration = 1300, decimals = 0 }) {
+const statInfo = {
+  global: 'WHO-level global impact benchmark.',
+  egypt: 'CAPMAS 2024 national statistic.',
+  human: 'Human behavior remains the dominant accident factor.',
+}
+
+function StatTicker({ value, suffix = '', decimals = 0, duration = 1200 }) {
   const [current, setCurrent] = useState(0)
 
   useEffect(() => {
-    let rafId
+    let frameId
     const start = performance.now()
 
-    const tick = (now) => {
-      const elapsed = now - start
-      const ratio = Math.min(elapsed / duration, 1)
+    const step = (now) => {
+      const ratio = Math.min((now - start) / duration, 1)
       const eased = 1 - (1 - ratio) * (1 - ratio)
       setCurrent(value * eased)
 
       if (ratio < 1) {
-        rafId = requestAnimationFrame(tick)
+        frameId = requestAnimationFrame(step)
       }
     }
 
-    rafId = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(rafId)
+    frameId = requestAnimationFrame(step)
+    return () => cancelAnimationFrame(frameId)
   }, [value, duration])
 
   return `${current.toFixed(decimals)}${suffix}`
 }
 
 function App() {
-  const [activeSection, setActiveSection] = useState(navSections[0].id)
-  const [progress, setProgress] = useState(0)
+  const [currentSlide, setCurrentSlide] = useState(0)
+  const [direction, setDirection] = useState(1)
+  const [started, setStarted] = useState(false)
+  const [autoplay, setAutoplay] = useState(false)
+  const [theme, setTheme] = useState('dark')
   const [alertActive, setAlertActive] = useState(false)
   const [scenario, setScenario] = useState('fatigue')
+  const [activeStat, setActiveStat] = useState('global')
+  const wheelLockRef = useRef(false)
 
   const activeScenario = scenarioData[scenario]
 
+  const slides = useMemo(
+    () => [
+      {
+        id: 'introduction',
+        navLabel: 'Introduction',
+        eyebrow: '01 / Introduction',
+        title: 'A Multimodal Safety Shield.',
+        content: (
+          <div className="grid grid-cols-[1.35fr_1fr] gap-8">
+            <div>
+              <p className="max-w-4xl text-xl leading-relaxed text-current/80">
+                A real-time Driver Monitoring System that detects fatigue, distraction, and reduced attention
+                using vision-based behavioral sensing and physiological heart-rate monitoring.
+              </p>
+              <div className="mt-8 grid grid-cols-3 gap-4">
+                <button type="button" className="hud-chip rounded-2xl border p-4 text-left" onClick={() => setActiveStat('global')}>
+                  <p className="text-xs uppercase tracking-[0.2em]">Global deaths</p>
+                  <p className="mt-2 text-3xl font-black text-amber-300">
+                    <StatTicker value={1.19} decimals={2} suffix="M" />
+                  </p>
+                </button>
+                <button type="button" className="hud-chip rounded-2xl border p-4 text-left" onClick={() => setActiveStat('egypt')}>
+                  <p className="text-xs uppercase tracking-[0.2em]">Egypt 2024</p>
+                  <p className="mt-2 text-3xl font-black text-red-300">
+                    <StatTicker value={5260} />
+                  </p>
+                </button>
+                <button type="button" className="hud-chip rounded-2xl border p-4 text-left" onClick={() => setActiveStat('human')}>
+                  <p className="text-xs uppercase tracking-[0.2em]">Human factors</p>
+                  <p className="mt-2 text-3xl font-black text-cyan-300">
+                    <StatTicker value={64} suffix="%" />
+                  </p>
+                </button>
+              </div>
+              <p className="mt-4 rounded-xl border border-current/20 bg-black/15 p-3 text-sm text-current/85">
+                {statInfo[activeStat]}
+              </p>
+            </div>
+
+            <aside className="hud-chip rounded-2xl border p-5">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold uppercase tracking-[0.2em]">Live Risk Scenario</h3>
+                <ShieldAlert size={18} className="text-amber-300" />
+              </div>
+
+              <div className="mt-4 flex gap-2">
+                {Object.entries(scenarioData).map(([key, info]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setScenario(key)}
+                    className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+                      scenario === key ? 'bg-cyan-400/20 text-cyan-200' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                    }`}
+                  >
+                    {info.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="mt-5 space-y-4">
+                <div>
+                  <p className="text-xs tracking-[0.16em] text-current/70">Estimated Crash Risk</p>
+                  <div className="mt-2 h-2 overflow-hidden rounded bg-black/35">
+                    <div className="h-full bg-linear-to-r from-cyan-400 via-amber-400 to-red-500" style={{ width: `${activeScenario.risk}%` }} />
+                  </div>
+                  <p className="mt-1 text-right text-sm font-bold text-red-300">{activeScenario.risk}%</p>
+                </div>
+                <div>
+                  <p className="text-xs tracking-[0.16em] text-current/70">Detection Confidence</p>
+                  <div className="mt-2 h-2 overflow-hidden rounded bg-black/35">
+                    <div className="h-full bg-cyan-400" style={{ width: `${activeScenario.confidence}%` }} />
+                  </div>
+                  <p className="mt-1 text-right text-sm font-bold text-cyan-300">{activeScenario.confidence}%</p>
+                </div>
+                <p className="rounded-xl border border-current/20 bg-black/15 p-3 text-sm text-current/85">
+                  <span className="font-bold text-current">Trigger Logic:</span> {activeScenario.trigger}
+                </p>
+              </div>
+            </aside>
+          </div>
+        ),
+      },
+      {
+        id: 'motivation',
+        navLabel: 'Motivation',
+        eyebrow: '02 / Motivation',
+        title: 'Global Crisis, Local Urgency',
+        content: (
+          <div className="space-y-5 text-lg text-current/82">
+            <p>
+              Road traffic incidents claim 1.19 million lives each year globally. In Egypt, 5,260 deaths were
+              recorded in 2024, and human factors contribute around 64% of accidents.
+            </p>
+            <p>
+              Physiologically, heart rate can drop by about 9% when a driver becomes sleepy, making multimodal
+              fusion essential for early detection.
+            </p>
+          </div>
+        ),
+      },
+      {
+        id: 'literature-survey',
+        navLabel: 'Literature',
+        eyebrow: '03 / Literature Survey',
+        title: 'Research Landscape',
+        content: (
+          <div className="grid grid-cols-4 gap-4">
+            <article className="info-card rounded-xl border p-4">
+              <h3 className="font-bold">Behavioral Cues</h3>
+              <p className="mt-2 text-sm">Eye closure, yawning, blink rate, and head dynamics.</p>
+            </article>
+            <article className="info-card rounded-xl border p-4">
+              <h3 className="font-bold">Physiological Cues</h3>
+              <p className="mt-2 text-sm">Heart rate and HRV reflect internal fatigue state.</p>
+            </article>
+            <article className="info-card rounded-xl border p-4">
+              <h3 className="font-bold">Vehicle-Based Cues</h3>
+              <p className="mt-2 text-sm">Lane drift and steering behavior as external indicators.</p>
+            </article>
+            <article className="info-card rounded-xl border border-cyan-300/45 p-4">
+              <h3 className="font-bold text-cyan-200">SOTA Result</h3>
+              <p className="mt-2 text-sm">ResNet50V2 achieves 99.7% eye-state identification accuracy.</p>
+            </article>
+          </div>
+        ),
+      },
+      {
+        id: 'challenges',
+        navLabel: 'Challenges',
+        eyebrow: '04 / Challenges',
+        title: 'Engineering Hurdles',
+        content: (
+          <ul className="grid grid-cols-2 gap-4">
+            <li className="info-card rounded-xl border p-4">Lighting Sensitivity: poor night-scene performance.</li>
+            <li className="info-card rounded-xl border p-4">Face Occlusion: sunglasses or masks hide critical cues.</li>
+            <li className="info-card rounded-xl border p-4">Computational Complexity on edge devices.</li>
+            <li className="info-card rounded-xl border p-4">User Comfort constraints in wearable sensing.</li>
+          </ul>
+        ),
+      },
+      {
+        id: 'problem-statement',
+        navLabel: 'Problem',
+        eyebrow: '05 / Problem Statement',
+        title: 'Critical Impairments Are Detected Too Late',
+        content: (
+          <p className="max-w-5xl text-xl leading-relaxed text-current/85">
+            Driver impairments often go unnoticed until it is too late. Our DMS bridges this gap with continuous
+            real-time detection and immediate intervention logic.
+          </p>
+        ),
+      },
+      {
+        id: 'project-objectives',
+        navLabel: 'Objectives',
+        eyebrow: '06 / Project Objectives',
+        title: 'SMART Targets',
+        content: (
+          <ul className="space-y-4 text-lg">
+            <li className="info-card rounded-xl border border-emerald-300/35 p-4">
+              Reach 85-90% accuracy for eyes, gaze, and phone-use detection.
+            </li>
+            <li className="info-card rounded-xl border border-emerald-300/35 p-4">
+              Keep end-to-end latency below 500ms for in-vehicle deployment.
+            </li>
+          </ul>
+        ),
+      },
+      {
+        id: 'key-activities',
+        navLabel: 'Activities',
+        eyebrow: '07 / Key Activities',
+        title: 'Core Services',
+        content: (
+          <div className="grid grid-cols-2 gap-4">
+            {serviceCards.map((card) => {
+              const Icon = card.icon
+
+              return (
+                <article key={card.title} className="info-card rounded-xl border p-4">
+                  <div className="mb-3 inline-flex rounded-lg border border-cyan-300/25 bg-cyan-400/10 p-2 text-cyan-300">
+                    <Icon size={18} />
+                  </div>
+                  <h3 className="font-bold">{card.title}</h3>
+                  <p className="mt-2 text-sm">{card.description}</p>
+                </article>
+              )
+            })}
+          </div>
+        ),
+      },
+      {
+        id: 'system-architecture',
+        navLabel: 'Architecture',
+        eyebrow: '08 / System Architecture',
+        title: '6-Stage Inference Pipeline',
+        content: (
+          <Suspense fallback={<div className="rounded-xl border border-current/20 p-6">Loading architecture module...</div>}>
+            <ArchitectureFlow />
+          </Suspense>
+        ),
+      },
+      {
+        id: 'technical-phase',
+        navLabel: 'Technical Phase',
+        eyebrow: '09 / Technical Phase',
+        title: 'Model & Sensor Stack',
+        content: (
+          <div className="grid grid-cols-3 gap-4">
+            <article className="info-card rounded-xl border p-4">
+              <div className="mb-2 inline-flex rounded-lg border border-cyan-300/25 bg-cyan-400/10 p-2 text-cyan-300">
+                <Camera size={18} />
+              </div>
+              <h3 className="font-bold">Vision</h3>
+              <p className="mt-2 text-sm">MediaPipe Face Mesh for very fast eye and head landmark extraction.</p>
+            </article>
+            <article className="info-card rounded-xl border p-4">
+              <div className="mb-2 inline-flex rounded-lg border border-cyan-300/25 bg-cyan-400/10 p-2 text-cyan-300">
+                <Smartphone size={18} />
+              </div>
+              <h3 className="font-bold">Object Detection</h3>
+              <p className="mt-2 text-sm">YOLOv5 for high-accuracy phone-use detection.</p>
+            </article>
+            <article className="info-card rounded-xl border p-4">
+              <div className="mb-2 inline-flex rounded-lg border border-cyan-300/25 bg-cyan-400/10 p-2 text-cyan-300">
+                <Activity size={18} />
+              </div>
+              <h3 className="font-bold">Physiological</h3>
+              <p className="mt-2 text-sm">Random Forest HR/HRV classification for internal-state inference.</p>
+            </article>
+          </div>
+        ),
+      },
+      {
+        id: 'design-constraints',
+        navLabel: 'Constraints',
+        eyebrow: '10 / Design Constraints',
+        title: 'Deployment Boundaries',
+        content: (
+          <ul className="grid grid-cols-3 gap-4">
+            <li className="info-card rounded-xl border p-4">Real-time processing constraints on edge hardware.</li>
+            <li className="info-card rounded-xl border p-4">Operating envelope from -10C to 50C.</li>
+            <li className="info-card rounded-xl border p-4">Privacy-first model: local processing, no cloud storage.</li>
+          </ul>
+        ),
+      },
+      {
+        id: 'software-hardware',
+        navLabel: 'Hardware',
+        eyebrow: '11 / Software & Hardware',
+        title: 'Edge-Ready Implementation',
+        content: (
+          <Suspense fallback={<div className="rounded-xl border border-current/20 p-6">Loading hardware module...</div>}>
+            <HardwareCards />
+          </Suspense>
+        ),
+      },
+      {
+        id: 'business-model',
+        navLabel: 'Business',
+        eyebrow: '12 / Business Model',
+        title: 'B2B Go-To-Market Strategy',
+        content: (
+          <p className="max-w-5xl text-xl leading-relaxed text-current/85">
+            The strategy targets Automotive OEMs and Commercial Fleets to reduce accident-related costs,
+            lower insurance pressure, and improve operational safety performance.
+          </p>
+        ),
+      },
+      {
+        id: 'ethics',
+        navLabel: 'Ethics',
+        eyebrow: '13 / Ethics',
+        title: 'Responsible AI in Road Safety',
+        content: (
+          <ul className="space-y-4 text-lg">
+            <li className="info-card rounded-xl border p-4">Privacy-by-Design with local inference and strict data boundaries.</li>
+            <li className="info-card rounded-xl border p-4">Informed participant consent before data collection.</li>
+            <li className="info-card rounded-xl border p-4">Dataset diversity including glasses and multiple age groups.</li>
+          </ul>
+        ),
+      },
+      {
+        id: 'what-has-been-done',
+        navLabel: 'Project I',
+        eyebrow: '14 / Project I',
+        title: 'What Has Been Done',
+        content: (
+          <ul className="space-y-4 text-lg">
+            <li className="info-card rounded-xl border p-4">Comparison matrix benchmark against Cipia and Smart Eye.</li>
+            <li className="info-card rounded-xl border p-4">SWOT and PESTLE strategic reports completed.</li>
+            <li className="info-card rounded-xl border p-4">Data collection plan built with UTA-RLDD and WESAD datasets.</li>
+          </ul>
+        ),
+      },
+      {
+        id: 'plan-for-project-ii',
+        navLabel: 'Project II',
+        eyebrow: '15 / Project II',
+        title: 'Roadmap',
+        content: (
+          <div className="space-y-5">
+            <ol className="space-y-3 text-lg">
+              <li className="info-card rounded-xl border p-4">Finalize hardware integration and synchronized sensor timing.</li>
+              <li className="info-card rounded-xl border p-4">Optimize models for AI HAT+ acceleration.</li>
+              <li className="info-card rounded-xl border p-4">Run real-world testing on Egyptian roads.</li>
+            </ol>
+            <Suspense fallback={<div className="rounded-xl border border-current/20 p-4">Loading alert simulator...</div>}>
+              <AlertSimulator alertActive={alertActive} onTrigger={() => setAlertActive(true)} />
+            </Suspense>
+          </div>
+        ),
+      },
+    ],
+    [activeScenario.confidence, activeScenario.risk, activeScenario.trigger, activeStat, alertActive, scenario],
+  )
+
+  const navigateTo = (nextIndex) => {
+    const clamped = Math.max(0, Math.min(slides.length - 1, nextIndex))
+    if (clamped === currentSlide) {
+      return
+    }
+    setDirection(clamped > currentSlide ? 1 : -1)
+    setCurrentSlide(clamped)
+  }
+
+  const goNext = () => navigateTo(currentSlide + 1)
+  const goPrev = () => navigateTo(currentSlide - 1)
+
   useEffect(() => {
-    const updateProgress = () => {
-      const scrollTop = window.scrollY
-      const scrollHeight = document.documentElement.scrollHeight - window.innerHeight
-      const nextProgress = scrollHeight > 0 ? (scrollTop / scrollHeight) * 100 : 0
-      setProgress(Math.min(100, Math.max(0, nextProgress)))
+    if (!started) {
+      return undefined
     }
 
-    updateProgress()
-    window.addEventListener('scroll', updateProgress, { passive: true })
+    const onKeyDown = (event) => {
+      if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+        event.preventDefault()
+        goNext()
+      }
 
-    return () => window.removeEventListener('scroll', updateProgress)
-  }, [])
+      if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+        event.preventDefault()
+        goPrev()
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  })
 
   useEffect(() => {
-    const sections = document.querySelectorAll('[data-section-id]')
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('is-visible')
-            setActiveSection(entry.target.getAttribute('id'))
-          }
-        })
-      },
-      { rootMargin: '-35% 0px -35% 0px', threshold: 0.15 },
-    )
+    if (!autoplay || !started) {
+      return undefined
+    }
 
-    sections.forEach((section) => observer.observe(section))
+    const intervalId = setInterval(() => {
+      setDirection(1)
+      setCurrentSlide((prev) => (prev >= slides.length - 1 ? 0 : prev + 1))
+    }, 5200)
 
-    return () => observer.disconnect()
-  }, [])
+    return () => clearInterval(intervalId)
+  }, [autoplay, started, slides.length])
 
   useEffect(() => {
     if (!alertActive) {
@@ -127,274 +470,98 @@ function App() {
     return () => clearTimeout(timeout)
   }, [alertActive])
 
+  const handleWheel = (event) => {
+    if (!started || wheelLockRef.current) {
+      return
+    }
+
+    const threshold = 40
+    if (Math.abs(event.deltaY) < threshold) {
+      return
+    }
+
+    wheelLockRef.current = true
+    if (event.deltaY > 0) {
+      goNext()
+    } else {
+      goPrev()
+    }
+
+    window.setTimeout(() => {
+      wheelLockRef.current = false
+    }, 620)
+  }
+
+  const toggleFullscreen = async () => {
+    if (!document.fullscreenElement) {
+      await document.documentElement.requestFullscreen()
+      return
+    }
+
+    await document.exitFullscreen()
+  }
+
+  const progress = ((currentSlide + 1) / slides.length) * 100
+  const current = slides[currentSlide]
+
   return (
-    <div className="relative min-h-screen bg-slate-950 text-slate-100">
+    <div className={`presentation-root ${theme === 'light' ? 'theme-light' : 'theme-dark'}`} onWheel={handleWheel}>
       <div className="road-grid pointer-events-none fixed inset-0" />
-      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_15%_12%,rgba(56,189,248,0.2),transparent_30%),radial-gradient(circle_at_88%_8%,rgba(248,113,113,0.16),transparent_28%),radial-gradient(circle_at_45%_100%,rgba(245,158,11,0.12),transparent_40%)]" />
+      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_15%_12%,rgba(56,189,248,0.24),transparent_34%),radial-gradient(circle_at_88%_8%,rgba(248,113,113,0.2),transparent_32%),radial-gradient(circle_at_45%_100%,rgba(245,158,11,0.12),transparent_42%)]" />
       {alertActive ? <div className="alert-frame pointer-events-none fixed inset-0 z-50" /> : null}
 
       <ProgressBar progress={progress} />
-      <Navbar sections={navSections} activeSection={activeSection} />
 
-      <main className="relative z-10 mx-auto flex w-full max-w-screen-xl flex-col gap-8 px-8 pb-20 pt-10">
-        <section className="cockpit-panel reveal-section is-visible rounded-3xl border border-cyan-400/20 bg-slate-900/80 p-8">
-          <div className="grid grid-cols-[1.4fr_1fr] gap-8">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.24em] text-cyan-300">Live Monitoring Console</p>
-              <h1 className="mt-3 text-5xl font-extrabold leading-tight text-white">
-                Real-Time Multimodal Driver Monitoring System
-              </h1>
-              <p className="mt-4 max-w-3xl text-slate-300">
-                AI-driven road safety for fatigue, distraction, and reduced attention using visual behavior and ECG-grade physiological sensing.
-              </p>
-
-              <div className="mt-7 grid grid-cols-3 gap-4">
-                <article className="hud-chip rounded-2xl border border-amber-400/40 p-4">
-                  <p className="text-xs uppercase tracking-[0.22em] text-amber-200">Global Deaths</p>
-                  <p className="mt-2 text-3xl font-black text-amber-300">
-                    <StatTicker value={1.19} suffix="M" decimals={2} />
-                  </p>
-                </article>
-                <article className="hud-chip rounded-2xl border border-red-400/45 p-4">
-                  <p className="text-xs uppercase tracking-[0.22em] text-red-200">Egypt 2024</p>
-                  <p className="mt-2 text-3xl font-black text-red-300">
-                    <StatTicker value={5260} />
-                  </p>
-                </article>
-                <article className="hud-chip rounded-2xl border border-cyan-400/45 p-4">
-                  <p className="text-xs uppercase tracking-[0.22em] text-cyan-200">Human Factors</p>
-                  <p className="mt-2 text-3xl font-black text-cyan-300">
-                    <StatTicker value={64} suffix="%" />
-                  </p>
-                </article>
-              </div>
+      {!started ? (
+        <div className="start-overlay fixed inset-0 z-50 flex items-center justify-center">
+          <div className="start-panel w-full max-w-4xl rounded-3xl border p-12 text-center">
+            <p className="text-sm font-bold uppercase tracking-[0.28em] text-cyan-300">Graduation Project Presentation</p>
+            <h1 className="mt-4 text-6xl font-black">Real-Time Multimodal DMS</h1>
+            <p className="mx-auto mt-5 max-w-3xl text-lg text-current/80">
+              A laptop-first interactive slide experience with keyboard navigation, animated transitions,
+              live risk simulation, and full project content.
+            </p>
+            <div className="mt-10 flex items-center justify-center gap-3">
+              <button type="button" className="start-btn" onClick={() => setStarted(true)}>
+                Start Presentation
+              </button>
+              <button
+                type="button"
+                className="start-btn-secondary"
+                onClick={() => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))}
+              >
+                Toggle {theme === 'dark' ? 'Light' : 'Dark'} Mode
+              </button>
             </div>
-
-            <aside className="rounded-2xl border border-slate-700 bg-slate-950/90 p-5">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold uppercase tracking-[0.2em] text-slate-200">Risk Scenario</h3>
-                <ShieldAlert size={18} className="text-amber-300" />
-              </div>
-              <div className="mt-4 flex gap-2">
-                {Object.entries(scenarioData).map(([key, info]) => (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => setScenario(key)}
-                    className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
-                      scenario === key
-                        ? 'bg-cyan-400/20 text-cyan-200'
-                        : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                    }`}
-                  >
-                    {info.label}
-                  </button>
-                ))}
-              </div>
-
-              <div className="mt-5 space-y-4">
-                <div>
-                  <p className="text-xs tracking-[0.18em] text-slate-400">Estimated Crash Risk</p>
-                  <div className="mt-2 h-2 overflow-hidden rounded bg-slate-800">
-                    <div className="h-full bg-linear-to-r from-cyan-400 via-amber-400 to-red-500" style={{ width: `${activeScenario.risk}%` }} />
-                  </div>
-                  <p className="mt-1 text-right text-sm font-bold text-red-300">{activeScenario.risk}%</p>
-                </div>
-                <div>
-                  <p className="text-xs tracking-[0.18em] text-slate-400">Detection Confidence</p>
-                  <div className="mt-2 h-2 overflow-hidden rounded bg-slate-800">
-                    <div className="h-full bg-cyan-400" style={{ width: `${activeScenario.confidence}%` }} />
-                  </div>
-                  <p className="mt-1 text-right text-sm font-bold text-cyan-300">{activeScenario.confidence}%</p>
-                </div>
-                <p className="rounded-xl border border-slate-700 bg-slate-900 p-3 text-sm text-slate-300">
-                  <span className="font-bold text-slate-100">Trigger Logic:</span> {activeScenario.trigger}
-                </p>
-              </div>
-            </aside>
           </div>
-        </section>
+        </div>
+      ) : null}
 
-        <SectionBlock
-          id="introduction"
-          eyebrow="01 / Introduction"
-          title="A Multimodal Safety Shield."
-        >
-          <p>
-            A real-time Driver Monitoring System that detects fatigue, distraction, and reduced attention
-            using vision-based behavioral sensing and physiological heart-rate monitoring.
-          </p>
-        </SectionBlock>
+      {started ? (
+        <>
+          <ProgressDots slides={slides} current={currentSlide} onSelect={(index) => navigateTo(index)} />
 
-        <SectionBlock id="motivation" eyebrow="02 / Motivation" title="Global Crisis, Local Urgency">
-          <div className="grid grid-cols-3 gap-4">
-            <article className="hud-chip rounded-xl border border-amber-400/45 p-4">
-              <p className="text-2xl font-black text-amber-300">
-                <StatTicker value={1.19} suffix="M" decimals={2} />
-              </p>
-              <p>Annual road deaths worldwide.</p>
-            </article>
-            <article className="hud-chip rounded-xl border border-red-400/45 p-4">
-              <p className="text-2xl font-black text-red-300">
-                <StatTicker value={5260} />
-              </p>
-              <p>Deaths in Egypt (2024), with 64% linked to human factors.</p>
-            </article>
-            <article className="hud-chip rounded-xl border border-cyan-400/45 p-4">
-              <p className="text-2xl font-black text-cyan-300">
-                -<StatTicker value={9} suffix="%" />
-              </p>
-              <p>Heart-rate drop observed when drivers become sleepy.</p>
-            </article>
+          <div className="relative z-20 h-screen overflow-hidden">
+            <AnimatePresence mode="wait" custom={direction}>
+              <Slide key={current.id} direction={direction} eyebrow={current.eyebrow} title={current.title}>
+                {current.content}
+              </Slide>
+            </AnimatePresence>
           </div>
-        </SectionBlock>
 
-        <SectionBlock id="literature-survey" eyebrow="03 / Literature Survey" title="Research Landscape">
-          <div className="grid grid-cols-4 gap-4">
-            <article className="rounded-xl border border-slate-700 bg-slate-900/70 p-4">
-              <h3 className="font-bold text-slate-100">Behavioral Cues</h3>
-              <p className="mt-2 text-sm">Eye closure, yawning, blink rate, and head dynamics.</p>
-            </article>
-            <article className="rounded-xl border border-slate-700 bg-slate-900/70 p-4">
-              <h3 className="font-bold text-slate-100">Physiological Cues</h3>
-              <p className="mt-2 text-sm">Heart rate and HRV reflect internal fatigue state.</p>
-            </article>
-            <article className="rounded-xl border border-slate-700 bg-slate-900/70 p-4">
-              <h3 className="font-bold text-slate-100">Vehicle-Based Cues</h3>
-              <p className="mt-2 text-sm">Lane drift and steering behavior as external indicators.</p>
-            </article>
-            <article className="rounded-xl border border-cyan-300/40 bg-cyan-400/10 p-4">
-              <h3 className="font-bold text-cyan-100">SOTA Result</h3>
-              <p className="mt-2 text-sm">ResNet50V2 reaches 99.7% eye-state identification accuracy.</p>
-            </article>
-          </div>
-        </SectionBlock>
-
-        <SectionBlock id="challenges" eyebrow="04 / Challenges" title="Engineering Hurdles">
-          <ul className="grid grid-cols-2 gap-3">
-            <li className="rounded-xl border border-slate-700 bg-slate-900/70 p-4">Lighting Sensitivity: weak night-scene performance.</li>
-            <li className="rounded-xl border border-slate-700 bg-slate-900/70 p-4">Face Occlusion: sunglasses and masks disrupt landmarks.</li>
-            <li className="rounded-xl border border-slate-700 bg-slate-900/70 p-4">Computational Complexity on edge devices.</li>
-            <li className="rounded-xl border border-slate-700 bg-slate-900/70 p-4">User Comfort constraints in wearable sensing.</li>
-          </ul>
-        </SectionBlock>
-
-        <SectionBlock
-          id="problem-statement"
-          eyebrow="05 / Problem Statement"
-          title="Critical Impairments Are Detected Too Late"
-        >
-          <p>
-            Driver impairment often goes unnoticed until a dangerous moment. Our system closes this gap through
-            continuous real-time detection and immediate intervention logic.
-          </p>
-        </SectionBlock>
-
-        <SectionBlock id="project-objectives" eyebrow="06 / Project Objectives" title="SMART Targets">
-          <ul className="space-y-3">
-            <li className="rounded-xl border border-emerald-300/35 bg-emerald-500/10 p-4">
-              Achieve 85-90% detection accuracy for eyes, gaze, and phone use.
-            </li>
-            <li className="rounded-xl border border-emerald-300/35 bg-emerald-500/10 p-4">
-              Maintain end-to-end latency below 500ms for practical in-vehicle deployment.
-            </li>
-          </ul>
-        </SectionBlock>
-
-        <SectionBlock id="key-activities" eyebrow="07 / Key Activities" title="Core Services">
-          <div className="grid grid-cols-2 gap-4">
-            {serviceCards.map((card) => {
-              const Icon = card.icon
-
-              return (
-                <article key={card.title} className="rounded-xl border border-slate-700 bg-slate-900/70 p-4">
-                  <div className="mb-3 inline-flex rounded-lg bg-cyan-400/15 p-2 text-cyan-300">
-                    <Icon size={18} />
-                  </div>
-                  <h3 className="font-bold text-slate-100">{card.title}</h3>
-                  <p className="mt-2 text-sm">{card.description}</p>
-                </article>
-              )
-            })}
-          </div>
-        </SectionBlock>
-
-        <SectionBlock id="system-architecture" eyebrow="08 / System Architecture" title="6-Stage Inference Pipeline">
-          <ArchitectureFlow />
-        </SectionBlock>
-
-        <SectionBlock id="technical-phase" eyebrow="09 / Technical Phase" title="Model & Sensor Stack">
-          <div className="grid grid-cols-3 gap-4">
-            <article className="rounded-xl border border-slate-700 bg-slate-900/70 p-4">
-              <div className="mb-2 inline-flex rounded-lg bg-cyan-500/15 p-2 text-cyan-300">
-                <Camera size={18} />
-              </div>
-              <h3 className="font-bold text-slate-100">Vision</h3>
-              <p className="mt-2 text-sm">MediaPipe Face Mesh for very fast eye and head landmark extraction.</p>
-            </article>
-            <article className="rounded-xl border border-slate-700 bg-slate-900/70 p-4">
-              <div className="mb-2 inline-flex rounded-lg bg-cyan-500/15 p-2 text-cyan-300">
-                <Smartphone size={18} />
-              </div>
-              <h3 className="font-bold text-slate-100">Object Detection</h3>
-              <p className="mt-2 text-sm">YOLOv5 for high-accuracy phone-use event detection.</p>
-            </article>
-            <article className="rounded-xl border border-slate-700 bg-slate-900/70 p-4">
-              <div className="mb-2 inline-flex rounded-lg bg-cyan-500/15 p-2 text-cyan-300">
-                <Activity size={18} />
-              </div>
-              <h3 className="font-bold text-slate-100">Physiological</h3>
-              <p className="mt-2 text-sm">Random Forest HR/HRV classification for internal-state inference.</p>
-            </article>
-          </div>
-        </SectionBlock>
-
-        <SectionBlock id="design-constraints" eyebrow="10 / Design Constraints" title="Deployment Boundaries">
-          <ul className="grid grid-cols-3 gap-3">
-            <li className="rounded-xl border border-slate-700 bg-slate-900/70 p-4">Real-time processing constraints on edge hardware.</li>
-            <li className="rounded-xl border border-slate-700 bg-slate-900/70 p-4">Operating envelope from -10C to 50C.</li>
-            <li className="rounded-xl border border-slate-700 bg-slate-900/70 p-4">Privacy-first: local processing, no cloud storage.</li>
-          </ul>
-        </SectionBlock>
-
-        <SectionBlock id="software-hardware" eyebrow="11 / Software & Hardware" title="Edge-Ready Implementation">
-          <HardwareCards />
-        </SectionBlock>
-
-        <SectionBlock id="business-model" eyebrow="12 / Business Model" title="B2B Go-To-Market Strategy">
-          <p>
-            The deployment model targets Automotive OEMs and Commercial Fleets, focusing on reduced accident-related
-            losses, lower insurance expenses, and measurable operational safety gains.
-          </p>
-        </SectionBlock>
-
-        <SectionBlock id="ethics" eyebrow="13 / Ethics" title="Responsible AI in Road Safety">
-          <ul className="space-y-3">
-            <li className="rounded-xl border border-slate-700 bg-slate-900/70 p-4">Privacy-by-Design and local inference safeguards.</li>
-            <li className="rounded-xl border border-slate-700 bg-slate-900/70 p-4">Informed participant consent before data collection.</li>
-            <li className="rounded-xl border border-slate-700 bg-slate-900/70 p-4">Dataset diversity across age groups and eyewear conditions.</li>
-          </ul>
-        </SectionBlock>
-
-        <SectionBlock id="what-has-been-done" eyebrow="14 / Project I" title="What Has Been Done">
-          <ul className="space-y-3">
-            <li className="rounded-xl border border-slate-700 bg-slate-900/70 p-4">Comparison matrix benchmarking against Cipia and Smart Eye.</li>
-            <li className="rounded-xl border border-slate-700 bg-slate-900/70 p-4">Strategic groundwork with SWOT and PESTLE reports.</li>
-            <li className="rounded-xl border border-slate-700 bg-slate-900/70 p-4">Data collection plan using UTA-RLDD and WESAD datasets.</li>
-          </ul>
-        </SectionBlock>
-
-        <SectionBlock id="plan-for-project-ii" eyebrow="15 / Project II" title="Roadmap">
-          <ol className="space-y-3">
-            <li className="rounded-xl border border-slate-700 bg-slate-900/70 p-4">Finalize full hardware integration and synchronized sensor timing.</li>
-            <li className="rounded-xl border border-slate-700 bg-slate-900/70 p-4">Optimize inference workloads for AI HAT+ acceleration.</li>
-            <li className="rounded-xl border border-slate-700 bg-slate-900/70 p-4">Run real-world validation on Egyptian roads and evaluate alert outcomes.</li>
-          </ol>
-          <div className="mt-6">
-            <AlertSimulator alertActive={alertActive} onTrigger={() => setAlertActive(true)} />
-          </div>
-        </SectionBlock>
-      </main>
+          <PresentationControls
+            onPrev={goPrev}
+            onNext={goNext}
+            onToggleAutoplay={() => setAutoplay((prev) => !prev)}
+            autoplay={autoplay}
+            onToggleTheme={() => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))}
+            theme={theme}
+            onFullscreen={toggleFullscreen}
+            current={currentSlide}
+            total={slides.length}
+          />
+        </>
+      ) : null}
     </div>
   )
 }
