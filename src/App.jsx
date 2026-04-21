@@ -9,6 +9,7 @@ import Slide from './components/Slide'
 const IntroSlide = lazy(() => import('./components/IntroSlide'))
 const TableOfContentsSlide = lazy(() => import('./components/TableOfContentsSlide'))
 const GlobalStatisticsSlide = lazy(() => import('./components/GlobalStatisticsSlide'))
+const EgyptIntroductionSlide = lazy(() => import('./components/EgyptIntroductionSlide'))
 const ArchitectureFlow = lazy(() => import('./components/ArchitectureFlow'))
 const HardwareCards = lazy(() => import('./components/HardwareCards'))
 const AlertSimulator = lazy(() => import('./components/AlertSimulator'))
@@ -81,9 +82,20 @@ function App() {
         ),
       },
       {
+        id: 'egypt-introduction',
+        navLabel: 'Introduction',
+        eyebrow: '04 / Introduction',
+        title: 'Introduction',
+        content: (
+          <Suspense fallback={<div className="rounded-xl border border-current/20 p-6">Loading introduction module...</div>}>
+            <EgyptIntroductionSlide />
+          </Suspense>
+        ),
+      },
+      {
         id: 'literature-survey',
         navLabel: 'Literature',
-        eyebrow: '04 / Literature Survey',
+        eyebrow: '05 / Literature Survey',
         title: 'Research Landscape',
         content: (
           <div className="grid grid-cols-4 gap-4">
@@ -109,7 +121,7 @@ function App() {
       {
         id: 'challenges',
         navLabel: 'Challenges',
-        eyebrow: '05 / Challenges',
+        eyebrow: '06 / Challenges',
         title: 'Engineering Hurdles',
         content: (
           <ul className="grid grid-cols-2 gap-4">
@@ -123,7 +135,7 @@ function App() {
       {
         id: 'problem-statement',
         navLabel: 'Problem',
-        eyebrow: '06 / Problem Statement',
+        eyebrow: '07 / Problem Statement',
         title: 'Critical Impairments Are Detected Too Late',
         content: (
           <p className="max-w-5xl text-xl leading-relaxed text-current/85">
@@ -135,7 +147,7 @@ function App() {
       {
         id: 'project-objectives',
         navLabel: 'Objectives',
-        eyebrow: '07 / Project Objectives',
+        eyebrow: '08 / Project Objectives',
         title: 'SMART Targets',
         content: (
           <ul className="space-y-4 text-lg">
@@ -151,7 +163,7 @@ function App() {
       {
         id: 'key-activities',
         navLabel: 'Activities',
-        eyebrow: '08 / Key Activities',
+        eyebrow: '09 / Key Activities',
         title: 'Core Services',
         content: (
           <div className="grid grid-cols-2 gap-4">
@@ -174,7 +186,7 @@ function App() {
       {
         id: 'system-architecture',
         navLabel: 'Architecture',
-        eyebrow: '09 / System Architecture',
+        eyebrow: '10 / System Architecture',
         title: '6-Stage Inference Pipeline',
         content: (
           <Suspense fallback={<div className="rounded-xl border border-current/20 p-6">Loading architecture module...</div>}>
@@ -185,7 +197,7 @@ function App() {
       {
         id: 'technical-phase',
         navLabel: 'Technical Phase',
-        eyebrow: '10 / Technical Phase',
+        eyebrow: '11 / Technical Phase',
         title: 'Model & Sensor Stack',
         content: (
           <div className="grid grid-cols-3 gap-4">
@@ -216,7 +228,7 @@ function App() {
       {
         id: 'design-constraints',
         navLabel: 'Constraints',
-        eyebrow: '11 / Design Constraints',
+        eyebrow: '12 / Design Constraints',
         title: 'Deployment Boundaries',
         content: (
           <ul className="grid grid-cols-3 gap-4">
@@ -229,7 +241,7 @@ function App() {
       {
         id: 'software-hardware',
         navLabel: 'Hardware',
-        eyebrow: '12 / Software & Hardware',
+        eyebrow: '13 / Software & Hardware',
         title: 'Edge-Ready Implementation',
         content: (
           <Suspense fallback={<div className="rounded-xl border border-current/20 p-6">Loading hardware module...</div>}>
@@ -240,7 +252,7 @@ function App() {
       {
         id: 'business-model',
         navLabel: 'Business',
-        eyebrow: '13 / Business Model',
+        eyebrow: '14 / Business Model',
         title: 'B2B Go-To-Market Strategy',
         content: (
           <p className="max-w-5xl text-xl leading-relaxed text-current/85">
@@ -252,7 +264,7 @@ function App() {
       {
         id: 'ethics',
         navLabel: 'Ethics',
-        eyebrow: '14 / Ethics',
+        eyebrow: '15 / Ethics',
         title: 'Responsible AI in Road Safety',
         content: (
           <ul className="space-y-4 text-lg">
@@ -265,7 +277,7 @@ function App() {
       {
         id: 'what-has-been-done',
         navLabel: 'Project I',
-        eyebrow: '15 / Project I',
+        eyebrow: '16 / Project I',
         title: 'What Has Been Done',
         content: (
           <ul className="space-y-4 text-lg">
@@ -278,7 +290,7 @@ function App() {
       {
         id: 'plan-for-project-ii',
         navLabel: 'Project II',
-        eyebrow: '16 / Project II',
+        eyebrow: '17 / Project II',
         title: 'Roadmap',
         content: (
           <div className="space-y-5">
