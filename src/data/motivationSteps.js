@@ -1,0 +1,35 @@
+export const motivationSteps = [
+  {
+    id: 'problem',
+    label: 'Problem',
+    title: 'Driver distraction',
+    subtitle: 'A major cause of crashes on the road.',
+    description: 'When attention drifts, reaction time drops and safety margins disappear quickly.',
+    tone: 'red',
+  },
+  {
+    id: 'cause',
+    label: 'Cause',
+    title: 'Human behavior',
+    subtitle: 'The leading cause in Egypt.',
+    description: 'Human error, fatigue, and poor attention account for a large share of crashes in Egypt.',
+    tone: 'orange',
+  },
+  {
+    id: 'risk',
+    label: 'Risk',
+    title: 'Fatigue & delay',
+    subtitle: 'Early warning signs are often missed.',
+    description: 'Drowsiness and delayed reactions make the driver less able to avoid a collision in time.',
+    tone: 'yellow',
+  },
+  {
+    id: 'solution',
+    label: 'Solution',
+    title: 'Multimodal monitoring',
+    subtitle: 'Vision + physiological sensing.',
+    description: 'A real-time multimodal driver monitoring system can detect risk early and prevent accidents.',
+    tone: 'emerald',
+    dominant: true,
+  },
+]
